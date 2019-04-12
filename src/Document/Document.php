@@ -4,7 +4,38 @@ namespace Bricks\Business\ModulKassa\Document;
 use DateTime;
 use InvalidArgumentException;
 
-class Document implements DocumentInterface{
+class Document implements DocumentInterface
+{
+    /**
+     * Общая.
+     */
+    public const SNO_GENERAL = 'COMMON';
+
+    /**
+     * Упрощенная (доходы).
+     */
+    public const SNO_SIMPLE_INCOMES = 'SIMPLIFIED';
+
+    /**
+     * Упрощенная (доходы минус расходы).
+     */
+    public const SNO_SIMPLE_PROFIT = 'SIMPLIFIED_WITH_EXPENSE';
+
+    /**
+     * Единый налог на вмененный доход.
+     */
+    public const SNO_IMPUTED = 'ENVD';
+
+    /**
+     * Единый сельскохозяйственный налог.
+     */
+    public const SNO_AGRICULTURAL = 'COMMON_AGRICULTURAL';
+
+    /**
+     * Патентная.
+     */
+    public const SNO_PATENT = 'PATENT';
+
   private $id;
 
   private $checkoutDateTime;
@@ -25,6 +56,8 @@ class Document implements DocumentInterface{
 
   private $responseUrl;
 
+  private $taxMode;
+
   public function __construct(
     $id,
     DateTime $checkoutDateTime,
@@ -35,12 +68,10 @@ class Document implements DocumentInterface{
     $email = null,
     $phone = null,
     $isPrintReceipt = false,
-    $responseUrl = null
+    $responseUrl = null,
+    string $taxMode = null
   ){
-    if(!in_array($docType, [
-      DocumentInterface::TYPE_SALE,
-      DocumentInterface::TYPE_RETURN
-    ])){
+    if (!in_array($docType, [DocumentInterface::TYPE_SALE, DocumentInterface::TYPE_RETURN])) {
       throw new InvalidArgumentException(
         sprintf('Undefined doc type "%s".', $docType)
       );
@@ -60,6 +91,7 @@ class Document implements DocumentInterface{
     $this->phone = $phone;
     $this->isPrintReceipt = $isPrintReceipt;
     $this->responseUrl = $responseUrl;
+    $this->taxMode = $taxMode;
   }
 
   /**
@@ -68,7 +100,7 @@ class Document implements DocumentInterface{
    * @param InventPositionInterface $inventPosition Добавляемый товар.
    */
   public function addInventoryPosition(InventPositionInterface $inventPosition){
-    $this->inventPositions[] = $inventPositions;
+    $this->inventPositions[] = $inventPosition;
   }
 
   /**
@@ -77,7 +109,7 @@ class Document implements DocumentInterface{
    * @param MoneyPositionInterface $moneyPosition Добавляемый способ платежа.
    */
   public function addMoneyPosition(MoneyPositionInterface $moneyPosition){
-    $this->moneyPosition[] = $moneyPosition;
+    $this->moneyPositions[] = $moneyPosition;
   }
 
   /**
@@ -150,12 +182,21 @@ class Document implements DocumentInterface{
     return $this->responseUrl;
   }
 
+    /**
+     * {@inheritdoc}
+     */
+    public function getTaxMode()
+    {
+        return $this->taxMode;
+    }
+
   /**
-   * {@inheritdoc}
-   */
-  public function toJson(){
+  * @return string
+  */
+  public function toJson(): string
+  {
     return sprintf(
-      '{"id": "%s", "checkoutDateTime": "%s", "docNum": "%s", "docType": "%s", "email": "%s", "inventPositions": [%s], "moneyPositions": [%s], "printReceipt": %s%s}',
+      '{"id": "%s", "checkoutDateTime": "%s", "docNum": "%s", "docType": "%s", "email": "%s", "inventPositions": [%s], "moneyPositions": [%s], "printReceipt": %s%s%s}',
       $this->getId(),
       $this->getCheckoutDateTime()->format('c'),
       $this->getDocNum(),
@@ -176,6 +217,9 @@ class Document implements DocumentInterface{
       $this->isPrintReceipt()? 'true' : 'false',
       !is_null($this->getResponseUrl())?
         sprintf(', "responseUrl": "%s"', $this->getResponseUrl())
+        : '',
+      !is_null($this->getTaxMode())?
+        sprintf(', "TaxMode": "%s"', $this->getTaxMode())
         : ''
     );
   }
